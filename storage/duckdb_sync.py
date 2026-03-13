@@ -47,11 +47,19 @@ def sync_duckdb_from_s3() -> int:
     # CREATE OR REPLACE materializes the full result locally
     # Next time you query `events`, it reads from local disk — fast and offline-friendly
     conn.execute(f"""
-        CREATE OR REPLACE TABLE events AS
-        SELECT * FROM read_parquet('{s3_glob}', hive_partitioning = true)
-    """)
+    CREATE OR REPLACE TABLE events AS
+    SELECT * FROM (
+        SELECT *,
+               ROW_NUMBER() OVER (
+                   PARTITION BY event_id
+                   ORDER BY run_date DESC      -- keep the most recent version
+               ) AS rn
+        FROM read_parquet('{s3_glob}', hive_partitioning = true)
+    )
+    WHERE rn = 1
+""")
 
-    row_count = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+    row_count = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0] # type: ignore
     conn.close()
     return row_count
 

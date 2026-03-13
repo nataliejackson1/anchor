@@ -7,11 +7,8 @@ class Settings(BaseSettings):
     aws_region: str = "us-east-1"
     s3_bucket: str
 
-    # TODO: 
-    google_credentials_json: str = ""
-
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
 
-settings = Settings()
+settings = Settings() # type: ignore
