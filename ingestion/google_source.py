@@ -1,24 +1,3 @@
-"""
-Google Calendar source — fetches real events from Google Calendar API.
-
-SETUP (one-time):
-  1. Go to https://console.cloud.google.com
-  2. Create a new project (or select existing)
-  3. Enable the Google Calendar API:
-       APIs & Services → Enable APIs → search "Google Calendar API" → Enable
-  4. Create OAuth credentials:
-       APIs & Services → Credentials → Create Credentials → OAuth client ID
-       Application type: Desktop app
-       Name: anchor: 488349974781-6ceg52eo59fg6qkhehmec4jh1mls2rbd.apps.googleusercontent.com
-  5. Download the JSON file → save as credentials.json in your project root
-  6. Add to .gitignore: credentials.json, token.json
-  7. Run this file once directly to trigger the browser auth flow:
-       python ingestion/google_source.py
-     A browser window will open asking you to approve access.
-     After approval, token.json is saved — future runs won't need the browser.
-
-"""
-
 import os
 import logging
 from datetime import datetime, timedelta, timezone
