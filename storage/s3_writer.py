@@ -15,8 +15,8 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from ingestion.schema import CalendarEvent
-from common.config import settings
+from ingestion.calendar_schema import CalendarEvent
+from config import settings
 
 log = logging.getLogger(__name__)
 
