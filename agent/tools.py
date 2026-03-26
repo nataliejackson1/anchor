@@ -172,10 +172,11 @@ def get_drive_time(origin: str, destination: str, arrival_time: str) -> dict:
             "key": settings.google_maps_api_key,
         }
 
-        # Add traffic-aware arrival time if arrival time is provided
         if arrival_time:
             arrival_dt = datetime.fromisoformat(arrival_time)
-            params["arrival_time"] = int(arrival_dt.timestamp())
+            from datetime import timedelta
+            estimated_departure = arrival_dt - timedelta(minutes=45)
+            params["departure_time"] = int(estimated_departure.timestamp())
             params["traffic_model"] = "best_guess"
 
         resp = requests.get(url, params=params, timeout=10)

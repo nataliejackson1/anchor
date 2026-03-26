@@ -12,6 +12,7 @@ Steps:
 
 import logging
 from config import settings
+from delivery.email_sender import send_briefing_email
 from ingestion.google_source import fetch_google_events
 from ingestion.google_source import fetch_google_events_from_calendar
 from ingestion.adapter import normalize_events
@@ -66,6 +67,12 @@ def run_pipeline():
 
         briefing = render_briefing(briefing_text)
         print("\n" + briefing)
+
+        success = send_briefing_email(briefing_text)
+        if success:
+            log.info(f"Email delivered to {settings.email_recipient}")
+        else:
+            log.warning("Email delivery failed — check logs above for details")
 
         log.info("=== Pipeline complete ===")
 

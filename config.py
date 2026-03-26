@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     daily_routine: str 
     briefing_title: str
 
+    email_sender: str
+    email_recipient: str
+    gmail_app_password: str
 
     class Config:
         env_file = ".env"
