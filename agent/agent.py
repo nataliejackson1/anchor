@@ -125,7 +125,7 @@ def _execute_tool(tool_name: str, tool_input: dict) -> str:
         result = get_drive_time(
             origin=tool_input["origin"],
             destination=tool_input["destination"],
-            arrival_time=tool_input.get("arrival_time"), # type: ignore
+            arrival_time=tool_input.get("arrival_time"),
         )
     else:
         result = {"error": f"Unknown tool: {tool_name}"}

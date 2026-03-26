@@ -104,6 +104,7 @@ def test_get_drive_time_success(mock_get):
     result = get_drive_time(
         origin="Riverview, FL",
         destination="Riverview Sports Complex, FL",
+        arrival_time="2026-03-18T10:00:00",
     )
 
     assert result["error"] is None
@@ -160,8 +161,9 @@ def test_get_drive_time_bad_destination(mock_get):
     mock_get.return_value = mock_response
 
     result = get_drive_time(
-        origin="Riverview, FL",
+        origin="500 Channelside Drive, Tampa, FL 33602",
         destination="Nonexistent Place XYZ 99999",
+        arrival_time="2026-03-18T10:00:00",
     )
 
     assert result["error"] is not None

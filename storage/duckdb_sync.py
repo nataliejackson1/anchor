@@ -54,7 +54,7 @@ def sync_duckdb_from_s3() -> int:
                    PARTITION BY event_id
                    ORDER BY run_date DESC      -- keep the most recent version
                ) AS rn
-        FROM read_parquet('{s3_glob}', hive_partitioning = true)
+        FROM read_parquet('{s3_glob}', hive_partitioning = true, union_by_name = true)
     )
     WHERE rn = 1
 """)
