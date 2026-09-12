@@ -103,7 +103,7 @@ Analyze the calendar for decisions and schedule risks, not general family advice
 
 Use tools selectively:
 - Use get_drive_time only for off-site events where travel is relevant. Do not use it for home_location appointments.
-- Use get_weather only for Grant's golf options, weather during Grant's school pickup walk, or outdoor events.
+- Use get_weather only for Grant's golf options, weather during Grant's school pickup walk, or outdoor events. For school pickup, use the city or school area, not a street address.
 - Swim lessons are indoors and do not need weather analysis.
 - Use no more than one weather lookup per date and one drive-time lookup per distinct destination.
 - Stop using tools once those relevant decisions are answered.
@@ -300,7 +300,8 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
         raise
     final_text = final_response.choices[0].message.content
     if not final_text:
-        raise RuntimeError("Groq returned an empty final briefing")
+        log.warning("Groq returned an empty final briefing; using fallback")
+        return _build_fallback_briefing(events)
     log.info("Agent complete after max-iteration fallback")
     return final_text
 
