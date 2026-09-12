@@ -11,6 +11,8 @@ Steps:
 """
 
 import logging
+from pathlib import Path
+
 from config import settings
 from delivery.email_sender import send_briefing_email
 from ingestion.google_source import fetch_google_events
@@ -21,11 +23,14 @@ from storage.duckdb_sync import sync_duckdb_from_s3
 from agent.agent import run_agent
 from agent.briefing import render_briefing
 
+log_dir = Path("logs")
+log_dir.mkdir(exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("logs/pipeline.log"),
+        logging.FileHandler(log_dir / "pipeline.log"),
         logging.StreamHandler(),
     ],
 )

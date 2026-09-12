@@ -103,4 +103,6 @@ jobs:
           pip install -r requirements.txt
 
       - name: Send weekly briefing
-        run: python run_pipeline.py
+        run: |
+          mkdir -p logs
+          python run_pipeline.py
