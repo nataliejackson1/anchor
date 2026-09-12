@@ -1,13 +1,18 @@
-name: CI
+name: CI and Weekly Briefing
 
 on:
   push:
     branches: ["**"]
   pull_request:
     branches: ["**"]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 22 * * 0"  # Sunday 6:00 PM EDT (UTC)
+    - cron: "0 23 * * 0"  # Sunday 6:00 PM EST (UTC)
 
 jobs:
   test:
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -16,30 +21,33 @@ jobs:
         python-version: ["3.11", "3.12"]
 
     env:
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
-      AWS_REGION: us-east-1
-      S3_BUCKET: test-bucket
-      ANTHROPIC_API_KEY: test
-      GROQ_API_KEY: test
-      OPENWEATHER_API_KEY: test
-      GOOGLE_MAPS_API_KEY: test
-      HOME_LOCATION: "Riverview, FL"
-      WORK_LOCATION: "Tampa, FL"
-      SCHOOL_LOCATION: "Riverview, FL"
-      EMAIL_SENDER: test@example.com
-      EMAIL_RECIPIENT: family@example.com
-      GMAIL_APP_PASSWORD: test
-      BRIEFING_TITLE: "Weekly Family Briefing"
-      AGENT_TONE: "warm and practical"
-      DAILY_ROUTINE: "School and family logistics"
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+      GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+      GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+      CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
+      HOME_LOCATION: ${{ secrets.HOME_LOCATION }}
+      WORK_LOCATION: ${{ secrets.WORK_LOCATION }}
+      SCHOOL_LOCATION: ${{ secrets.SCHOOL_LOCATION }}
+      BRIEFING_DAYS_AHEAD: ${{ secrets.BRIEFING_DAYS_AHEAD || 7 }}
+      AGENT_TONE: ${{ secrets.AGENT_TONE }}
+      DAILY_ROUTINE: ${{ secrets.DAILY_ROUTINE }}
+      BRIEFING_TITLE: ${{ secrets.BRIEFING_TITLE }}
+      EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+      EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT }}
+      GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
 
     steps:
       - name: Check out repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -51,3 +59,48 @@ jobs:
 
       - name: Run tests
         run: pytest -q
+
+  send_briefing:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+      GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+      GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+      CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
+      HOME_LOCATION: ${{ secrets.HOME_LOCATION }}
+      WORK_LOCATION: ${{ secrets.WORK_LOCATION }}
+      SCHOOL_LOCATION: ${{ secrets.SCHOOL_LOCATION }}
+      BRIEFING_DAYS_AHEAD: ${{ secrets.BRIEFING_DAYS_AHEAD || 7 }}
+      AGENT_TONE: ${{ secrets.AGENT_TONE }}
+      DAILY_ROUTINE: ${{ secrets.DAILY_ROUTINE }}
+      BRIEFING_TITLE: ${{ secrets.BRIEFING_TITLE }}
+      EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+      EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT }}
+      GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Send weekly briefing
+        run: python run_pipeline.py
