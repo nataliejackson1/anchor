@@ -108,7 +108,7 @@ def _render_html(briefing_text: str, week_of: str) -> str:
       </td>
       </tr>'''
 
-    return f"""
+  return f"""
 <!DOCTYPE html>
 <html>
 <head>

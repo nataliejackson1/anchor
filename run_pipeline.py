@@ -82,7 +82,7 @@ def run_pipeline():
         if success:
             log.info(f"Email delivered to {settings.email_recipient}")
         else:
-            log.warning("Email delivery failed — check logs above for details")
+            raise RuntimeError("Email delivery failed; see the email sender error above")
 
         log.info("=== Pipeline complete ===")
 
