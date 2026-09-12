@@ -8,6 +8,7 @@ Phase 5 will add email delivery on top of this.
 import logging
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from config import settings
 
 log = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ def render_briefing(briefing_text: str) -> str:
     Wrap the agent's briefing text in a clean format.
     Returns the final string and saves it to a local file.
     """
-    now = datetime.now()
+    now = datetime.now(ZoneInfo(settings.calendar_timezone))
     week_of = now.strftime("%B %d, %Y")
     briefing_title = settings.briefing_title
     header = f"""

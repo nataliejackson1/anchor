@@ -5,6 +5,7 @@ Run with: pytest tests/test_adapter.py -v
 
 import pytest
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from ingestion.dummy_source import fetch_dummy_events
 from ingestion.adapter import normalize_events, _from_google, _from_ical
 
@@ -40,6 +41,27 @@ def test_google_event_normalized_correctly():
     assert "Mia" in event.attendees
     assert "coach@club.com" in event.attendees
     assert event.raw_payload is not None
+
+
+def test_google_event_honors_calendar_timezone():
+    """Google timestamps with a separate timezone are localized before storage."""
+    raw = {
+        "_raw_source": "google",
+        "id": "timezone-test",
+        "summary": "Eastern Time Event",
+        "start": {
+            "dateTime": "2026-03-15T16:00:00",
+            "timeZone": "America/New_York",
+        },
+        "end": {
+            "dateTime": "2026-03-15T17:00:00",
+            "timeZone": "America/New_York",
+        },
+    }
+
+    event = _from_google(raw)
+
+    assert event.start_time == datetime(2026, 3, 15, 16, tzinfo=ZoneInfo("America/New_York"))
 
 
 def test_ical_event_normalized_correctly():

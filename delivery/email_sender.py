@@ -7,9 +7,11 @@ Plain text fallback included for email clients that don't render HTML.
 
 import logging
 import smtplib
+from email.utils import getaddresses
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from config import settings
 
 log = logging.getLogger(__name__)
@@ -26,8 +28,10 @@ def send_briefing_email(briefing_text: str) -> bool:
         True if sent successfully, False otherwise
     """
     try:
-        week_of = datetime.now().strftime("%B %d, %Y")
+        now = datetime.now(ZoneInfo(settings.calendar_timezone))
+        week_of = now.strftime("%B %d, %Y")
         subject = f"📅 Weekly Family Briefing — {week_of}"
+        recipients = _parse_recipients(settings.email_recipient)
 
         html_body = _render_html(briefing_text, week_of)
         plain_body = _render_plain(briefing_text, week_of)
@@ -35,7 +39,7 @@ def send_briefing_email(briefing_text: str) -> bool:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"]    = settings.email_sender
-        msg["To"]      = settings.email_recipient
+        msg["To"]      = ", ".join(recipients)
 
         # Attach plain text first, HTML second
         # Email clients use the last part they can render (HTML preferred)
@@ -47,7 +51,7 @@ def send_briefing_email(briefing_text: str) -> bool:
             server.login(settings.email_sender, settings.gmail_app_password)
             server.sendmail(
                 settings.email_sender,
-                settings.email_recipient,
+                recipients,
                 msg.as_string()
             )
 
@@ -59,12 +63,21 @@ def send_briefing_email(briefing_text: str) -> bool:
             "Gmail authentication failed. Check EMAIL_SENDER and GMAIL_APP_PASSWORD in .env. "
         )
         return False
+
+
     except smtplib.SMTPException as e:
         log.error(f"SMTP error sending email: {e}")
         return False
     except Exception as e:
         log.error(f"Unexpected error sending email: {e}", exc_info=True)
         return False
+
+def _parse_recipients(value: str) -> list[str]:
+    """Parse comma-separated email addresses for the SMTP envelope."""
+    recipients = [address for _, address in getaddresses([value]) if address]
+    if not recipients:
+        raise ValueError("EMAIL_RECIPIENT must contain at least one email address")
+    return recipients
 
 
 def _render_html(briefing_text: str, week_of: str) -> str:
@@ -118,7 +131,7 @@ def _render_html(briefing_text: str, week_of: str) -> str:
             <td style="background-color:#f0f4f8; border-radius:0 0 8px 8px; padding:20px 32px;">
               <p style="margin:0; color:#888888; font-size:12px; text-align:center;">
                 Anchor — Family Chaos Orchestrator<br>
-                Generated {datetime.now().strftime("%A, %B %d at %-I:%M %p")}
+                Generated {datetime.now(ZoneInfo(settings.calendar_timezone)).strftime("%A, %B %d at %-I:%M %p %Z")}
               </p>
             </td>
           </tr>
@@ -142,5 +155,5 @@ def _render_plain(briefing_text: str, week_of: str) -> str:
 
 {'=' * 50}
 Anchor — Family Chaos Orchestrator
-Generated {datetime.now().strftime("%A, %B %d at %-I:%M %p")}
+Generated {datetime.now(ZoneInfo(settings.calendar_timezone)).strftime("%A, %B %d at %-I:%M %p %Z")}
 """

@@ -7,7 +7,9 @@ run_pipeline.py only ever calls normalize_events() and never touches raw shapes.
 import json
 import logging
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from ingestion.calendar_schema import CalendarEvent
+from config import settings
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +39,8 @@ def _from_google(raw: dict) -> CalendarEvent:
     """Normalize a Google Calendar API event dict."""
     start_str = raw["start"].get("dateTime") or raw["start"].get("date")
     end_str   = raw["end"].get("dateTime")   or raw["end"].get("date")
+    start_timezone = raw["start"].get("timeZone") or settings.calendar_timezone
+    end_timezone = raw["end"].get("timeZone") or start_timezone
 
     is_all_day = "dateTime" not in raw["start"]
 
@@ -49,8 +53,8 @@ def _from_google(raw: dict) -> CalendarEvent:
         event_id=f"google_{raw['id']}",
         source="google",
         title=raw.get("summary", "Untitled"),
-        start_time=_parse_dt(start_str),
-        end_time=_parse_dt(end_str),
+        start_time=_parse_dt(start_str, start_timezone),
+        end_time=_parse_dt(end_str, end_timezone),
         location=raw.get("location"),
         description=raw.get("description"),
         is_all_day=is_all_day,
@@ -81,12 +85,15 @@ def _from_ical(raw: dict, source: str) -> CalendarEvent:
     )
 
 
-def _parse_dt(value: str) -> datetime:
+def _parse_dt(value: str, timezone_name: str | None = None) -> datetime:
     """Parse ISO datetime string, handling both full datetimes and date-only strings."""
     if not value:
         raise ValueError("Empty datetime string")
     try:
-        return datetime.fromisoformat(value)
+        parsed = datetime.fromisoformat(value)
+        if parsed.tzinfo is None and timezone_name and "T" in value:
+            parsed = parsed.replace(tzinfo=ZoneInfo(timezone_name))
+        return parsed
     except ValueError:
         # Fall back: treat date-only as midnight
         return datetime.strptime(value[:10], "%Y-%m-%d")

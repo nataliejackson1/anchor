@@ -32,6 +32,7 @@ jobs:
       GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
       GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
       CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
+      CALENDAR_TIMEZONE: ${{ secrets.CALENDAR_TIMEZONE || 'America/New_York' }}
       HOME_LOCATION: ${{ secrets.HOME_LOCATION }}
       WORK_LOCATION: ${{ secrets.WORK_LOCATION }}
       SCHOOL_LOCATION: ${{ secrets.SCHOOL_LOCATION }}
@@ -78,6 +79,7 @@ jobs:
       GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
       GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
       CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
+      CALENDAR_TIMEZONE: ${{ secrets.CALENDAR_TIMEZONE || 'America/New_York' }}
       HOME_LOCATION: ${{ secrets.HOME_LOCATION }}
       WORK_LOCATION: ${{ secrets.WORK_LOCATION }}
       SCHOOL_LOCATION: ${{ secrets.SCHOOL_LOCATION }}

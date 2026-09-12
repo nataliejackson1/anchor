@@ -14,6 +14,7 @@ Flow:
 import json
 import logging
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from groq import Groq
 from storage.duckdb_sync import query_events
 from agent.tools import get_weather, get_drive_time
@@ -107,6 +108,12 @@ After gathering information with your tools, write a weekly briefing that:
 2. For each event includes: what it is, when, any drive time or weather considerations, and prep needed
 3. Flags any conflicts or tight turnarounds she should know about
 4. Ends with a short "prep list" — things to do in advance (buy, pack, prepare)
+
+Format the final briefing for quick scanning:
+- Use these plain-text section headings: MISSION STATUS, UPCOMING INTEL, LOGISTICS, and PREP LIST.
+- Put each event on its own bullet with the local date, local time, and timezone abbreviation.
+- Keep paragraphs short and leave a blank line between sections.
+- Do not include markdown tables, JSON, or commentary about using tools.
 """
 
 
@@ -266,7 +273,11 @@ def _format_events_for_prompt(events: list[dict]) -> str:
     for e in events:
         start = e.get("start_time", "")
         if hasattr(start, "strftime"):
-            start = start.strftime("%A %B %d at %-I:%M %p")
+            if start.tzinfo is None:
+                start = start.replace(tzinfo=ZoneInfo(settings.calendar_timezone))
+            else:
+                start = start.astimezone(ZoneInfo(settings.calendar_timezone))
+            start = start.strftime("%A, %B %d at %-I:%M %p %Z")
 
         line = f"- {e['title']} | {start}"
         if e.get("location"):

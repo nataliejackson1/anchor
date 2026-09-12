@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     google_credentials_json: str = ""
     calendar_id: str = ""
+    calendar_timezone: str = "America/New_York"
 
     home_location: str = ""
     work_location: str = ""
