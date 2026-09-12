@@ -212,10 +212,21 @@ def _briefing_sections(briefing_text: str) -> list[tuple[str, list[str], list[st
 
   # Some model responses put the complete briefing before empty headings.
   # Promote that useful content into one readable section and discard empties.
-  meaningful_sections = [section for section in sections if section[1] or section[2]]
+  meaningful_sections = [
+    section for section in sections
+    if (section[1] or section[2]) and not _only_empty_marker(section)
+  ]
   if before_headings:
     meaningful_sections.insert(0, ("WEEK AT A GLANCE", before_headings, []))
   return meaningful_sections
+
+
+def _only_empty_marker(section: tuple[str, list[str], list[str]]) -> bool:
+  """Hide sections whose only content is a model-generated empty marker."""
+  _, items, paragraphs = section
+  if paragraphs or not items:
+    return False
+  return all(item.strip().lower().rstrip(".") in {"none", "none identified", "none identified."} for item in items)
 
 
 def _format_inline(value: str) -> str:

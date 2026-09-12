@@ -135,16 +135,16 @@ MISSION STATUS
 One or two sentences covering the week's biggest logistics issue, or "No major conflicts.".
 
 ACTION ITEMS
-Only decisions, childcare conflicts, schedule changes, or appointments requiring attention. Write "None" when empty.
+Only decisions, childcare conflicts, schedule changes, or appointments requiring attention. Omit this section when empty.
 
 WEEK AT A GLANCE
 One short bullet per important event. Include local date, time, person, location, and drive time only when relevant. Do not repeat events unnecessarily.
 
 WEATHER WINDOWS
-Only Grant's best golf opportunities, school-pickup weather warnings, or weather-sensitive outdoor events. Write "None" when empty.
+Only Grant's best golf opportunities, school-pickup weather warnings, or weather-sensitive outdoor events. Omit this section when empty.
 
 PREP LIST
-Only concrete calendar-related actions. Write "None" when empty.
+Only concrete calendar-related actions. Omit this section when empty.
 
 Use plain-text headings and short bullets. Leave a blank line between sections. Do not use tables, JSON, long narrative paragraphs, or commentary about tools.
 """
@@ -346,21 +346,21 @@ def _build_fallback_briefing(events: list[dict]) -> str:
         keyword in tone for keyword in ("sergeant", "hard core", "hardcore", "command", "ops")
     )
     mission_line = (
-        f"- 🎯 Mission status: {len(events)} events are scheduled in the next week."
+        f"- 🎯 MISSION STATUS: {len(events)} events on deck. Calendar loaded; execute cleanly."
         if is_command_tone
         else f"- {len(events)} events are scheduled in the next week."
     )
     lines = [
         "MISSION STATUS",
         mission_line,
-        "",
-        "ACTION ITEMS",
-        "- ⚠️ Action required: review any time-sensitive appointments before the week begins."
-        if is_command_tone
-        else "- None identified without the briefing service.",
-        "",
-        "WEEK AT A GLANCE",
     ]
+    if is_command_tone:
+        lines.extend([
+            "ACTION ITEMS",
+            "- ⚠️ ACTION REQUIRED: Review the week before Monday. Resolve any schedule conflicts before they become a field exercise.",
+            "",
+        ])
+    lines.append("WEEK AT A GLANCE")
     for event in events:
         start = event.get("start_time", "")
         formatted_start = str(start)
@@ -377,12 +377,4 @@ def _build_fallback_briefing(events: list[dict]) -> str:
         else:
             lines.append("  Where: Home / no location listed")
 
-    lines.extend([
-        "",
-        "WEATHER WINDOWS",
-        "- None identified.",
-        "",
-        "PREP LIST",
-        "- None.",
-    ])
     return "\n".join(lines)

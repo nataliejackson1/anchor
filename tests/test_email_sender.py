@@ -85,7 +85,17 @@ ACTION ITEMS
 
     assert "Mission status" in html
     assert "Swim lesson" in html
-    assert "ACTION ITEMS" in html
+
+
+def test_render_html_omits_empty_sections():
+    """Sections containing only None markers are omitted from the email."""
+    html = _render_html(
+        "MISSION STATUS\n- 🎯 MISSION STATUS: Calendar loaded.\n\nWEATHER WINDOWS\n- None.\n",
+        "September 12, 2026",
+    )
+
+    assert "MISSION STATUS" in html
+    assert "WEATHER WINDOWS" not in html
 
 
 @patch("delivery.email_sender.smtplib.SMTP_SSL")
