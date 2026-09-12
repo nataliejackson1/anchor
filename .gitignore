@@ -17,13 +17,14 @@ logs/*.log
 notes.txt
 calendar.db
 *.db
-
+briefings/
 delivery/*.bak
 
 # Local credentials and OAuth
 credentials.json
 token.json
 client_secret*.json
+calendar-service-account.json
 
 # IDE / OS
 .DS_Store

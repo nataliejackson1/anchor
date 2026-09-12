@@ -52,9 +52,14 @@ def run_pipeline():
     log.info("=== Pipeline started ===")
     try:
         # ── Phase 1: Ingest ───────────────────────────────────────────────────
-        raw_events = fetch_google_events_from_calendar(calendar_id=settings.calendar_id, days_ahead=21)
-        raw_events = fetch_google_events(days_ahead=14)
-        log.info(f"Fetched {len(raw_events)} raw events")
+        shared_events = fetch_google_events_from_calendar(
+            calendar_id=settings.calendar_id,
+            days_ahead=21,
+        )
+        primary_events = fetch_google_events(days_ahead=14)
+
+        raw_events = shared_events + primary_events
+        log.info(f"Fetched {len(raw_events)} raw events across all configured Google calendars")
 
         events = normalize_events(raw_events)
         events = deduplicate(events)
