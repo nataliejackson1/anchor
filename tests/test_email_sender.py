@@ -50,6 +50,25 @@ def test_render_plain_contains_content():
     assert "Anchor" in plain
 
 
+def test_render_html_promotes_content_before_empty_headings():
+    """Malformed model output still becomes one readable briefing section."""
+    briefing = """- Saturday 10:00 AM - Swim lesson
+- Sunday 10:00 AM - Brunch
+
+**MISSION STATUS**
+
+**UPCOMING INTEL**
+
+**LOGISTICS**
+"""
+
+    html = _render_html(briefing, "September 12, 2026")
+
+    assert "WEEK AT A GLANCE" in html
+    assert "Saturday 10:00 AM - Swim lesson" in html
+    assert "- •" not in html
+
+
 @patch("delivery.email_sender.smtplib.SMTP_SSL")
 def test_send_briefing_email_success(mock_smtp):
     """Email sends successfully with valid credentials."""

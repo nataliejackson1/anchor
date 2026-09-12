@@ -170,22 +170,47 @@ def _briefing_sections(briefing_text: str) -> list[tuple[str, list[str], list[st
   title = "BRIEFING"
   items = []
   paragraphs = []
+  before_headings = []
+  found_heading = False
   for raw_line in briefing_text.strip().splitlines():
     line = raw_line.strip()
     if not line:
       continue
     normalized = line.rstrip(":").upper()
-    if normalized in {"MISSION STATUS", "UPCOMING INTEL", "LOGISTICS", "PREP LIST"}:
+    if normalized in {
+      "MISSION STATUS",
+      "ACTION ITEMS",
+      "UPCOMING INTEL",
+      "WEEK AT A GLANCE",
+      "LOGISTICS",
+      "WEATHER WINDOWS",
+      "CONFLICTS & TIGHT TURNAROUNDS",
+      "PREP LIST",
+    }:
+      found_heading = True
       if items or paragraphs:
         sections.append((title, items, paragraphs))
       title, items, paragraphs = normalized, [], []
     elif line.startswith(("- ", "– ", "* ")):
-      items.append(line[2:].strip())
+      item = re.sub(r"^(?:[-–*]\s*)+", "", line).strip()
+      if found_heading:
+        items.append(item)
+      else:
+        before_headings.append(item)
     else:
-      paragraphs.append(line)
+      if found_heading:
+        paragraphs.append(line)
+      else:
+        before_headings.append(line)
   if items or paragraphs:
     sections.append((title, items, paragraphs))
-  return sections
+
+  # Some model responses put the complete briefing before empty headings.
+  # Promote that useful content into one readable section and discard empties.
+  meaningful_sections = [section for section in sections if section[1] or section[2]]
+  if before_headings:
+    meaningful_sections.insert(0, ("WEEK AT A GLANCE", before_headings, []))
+  return meaningful_sections
 
 
 def _format_inline(value: str) -> str:
