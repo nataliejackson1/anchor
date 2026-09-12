@@ -260,6 +260,9 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
         # If Groq is done (no more tool calls), return the final text
         if not message.tool_calls:
             final_text = message.content
+            if not final_text or not final_text.strip():
+                log.warning("Groq completed without text; using fallback briefing")
+                return _build_fallback_briefing(events)
             log.info("Agent complete — briefing generated")
             return final_text
 
@@ -299,7 +302,7 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
             return _build_fallback_briefing(events)
         raise
     final_text = final_response.choices[0].message.content
-    if not final_text:
+    if not final_text or not final_text.strip():
         log.warning("Groq returned an empty final briefing; using fallback")
         return _build_fallback_briefing(events)
     log.info("Agent complete after max-iteration fallback")

@@ -69,6 +69,25 @@ def test_render_html_promotes_content_before_empty_headings():
     assert "- •" not in html
 
 
+def test_render_html_has_body_for_fallback_briefing():
+    """The deterministic fallback renders visible content in the email body."""
+    briefing = """MISSION STATUS
+- Mission status: 2 events are scheduled in the next week.
+
+WEEK AT A GLANCE
+- Saturday, Sep 12 at 10:00 AM EDT: Swim lesson
+
+ACTION ITEMS
+- None.
+"""
+
+    html = _render_html(briefing, "September 12, 2026")
+
+    assert "Mission status" in html
+    assert "Swim lesson" in html
+    assert "ACTION ITEMS" in html
+
+
 @patch("delivery.email_sender.smtplib.SMTP_SSL")
 def test_send_briefing_email_success(mock_smtp):
     """Email sends successfully with valid credentials."""
