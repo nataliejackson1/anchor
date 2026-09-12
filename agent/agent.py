@@ -21,7 +21,7 @@ from config import settings
 
 log = logging.getLogger(__name__)
 client = Groq(api_key=settings.groq_api_key)
-model = "llama-3.3-70b-versatile"
+model = settings.groq_model
 
 # ── Tool definitions (what Groq sees) ───────────────────────────────────────
 

@@ -13,6 +13,7 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str = ""
     groq_api_key: str = ""
+    groq_model: str = "openai/gpt-oss-20b"
     openweather_api_key: str = ""
     google_maps_api_key: str = ""
 
