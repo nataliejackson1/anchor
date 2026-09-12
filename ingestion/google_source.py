@@ -1,11 +1,11 @@
 import os
 import logging
 from datetime import datetime, timedelta, timezone
-from google.auth.transport.requests import Request # type: ignore
-from google.oauth2.credentials import Credentials # pyright: ignore[reportMissingImports]
-from google_auth_oauthlib.flow import InstalledAppFlow # type: ignore
-from googleapiclient.discovery import build # type: ignore
-from googleapiclient.errors import HttpError # type: ignore
+from google.auth.transport.requests import Request 
+from google.oauth2.credentials import Credentials 
+from google_auth_oauthlib.flow import InstalledAppFlow 
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError 
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def _get_credentials() -> Credentials:
                     "Download it from Google Cloud Console → APIs & Services → Credentials."
                 )
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            creds = flow.run_local_server(port=0)
+            creds = flow.run_local_server(port=0, prompt="consent")
 
         # Save for next run
         with open(TOKEN_FILE, "w") as f:

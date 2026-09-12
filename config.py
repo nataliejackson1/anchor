@@ -1,14 +1,42 @@
-from pydantic_settings import BaseSettings
+"""
+config.py — Loads all settings from environment variables / .env file.
+"""
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    aws_access_key_id: str
-    aws_secret_access_key: str
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
     aws_region: str = "us-east-1"
-    s3_bucket: str
+    s3_bucket: str = ""
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    anthropic_api_key: str = ""
+    groq_api_key: str = ""
+    openweather_api_key: str = ""
+    google_maps_api_key: str = ""
 
-settings = Settings() # type: ignore
+    google_credentials_json: str = ""
+    calendar_id: str = ""
+
+    home_location: str = ""
+    work_location: str = ""
+    school_location: str = ""
+    briefing_days_ahead: int = 7
+
+    agent_tone: str = "warm and practical"
+    daily_routine: str = ""
+    briefing_title: str = "Weekly Family Briefing"
+
+    email_sender: str = ""
+    email_recipient: str = ""
+    gmail_app_password: str = ""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
+settings = Settings()
