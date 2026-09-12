@@ -102,6 +102,8 @@ For every event with a location:
 - Call get_drive_time to calculate how long it takes to get there from the home location and when she needs to leave
 - Call get_weather if it's an outdoor event or the weather would affect what to bring or wear
 - Call get_weather for the home location for each day and give a quick summary of what the week's weather looks like overall
+- Use at most one weather lookup per date and one drive-time lookup per distinct destination.
+- Once the important lookups are complete, stop calling tools and write the briefing.
 
 After gathering information with your tools, write a weekly briefing that:
 1. Leads with the most important or time-sensitive things this week
@@ -188,7 +190,8 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
     # Groq will call tools, we execute them, feed results back, repeat
     # until Groq stops calling tools and gives us a final text response.
 
-    max_iterations = 15  # safety cap to prevent infinite loops
+    max_iterations = 6  # keep the run within Groq's free-tier token-per-minute limit
+    request_max_tokens = 1800
     iteration = 0
 
     while iteration < max_iterations:
@@ -200,10 +203,14 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
                 model=model,
                 messages=messages,
                 tools=TOOLS,
-                max_tokens=4096,
+                max_tokens=request_max_tokens,
             )
         except Exception as error:
-            if "output_parse_failed" not in str(error):
+            error_text = str(error)
+            if "rate_limit_exceeded" in error_text or "429" in error_text:
+                log.warning("Groq rate limit reached; using the event-based briefing fallback")
+                return _build_fallback_briefing(events)
+            if "output_parse_failed" not in error_text:
                 raise
 
             log.warning(
@@ -218,7 +225,7 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
                         "Do not call more tools. Write the complete weekly briefing now."
                     ),
                 }],
-                max_tokens=4096,
+                max_tokens=request_max_tokens,
             )
 
         message = response.choices[0].message
@@ -247,17 +254,23 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
             })
 
     log.warning("Agent hit max iterations; requesting a final briefing without tools")
-    final_response = client.chat.completions.create(
-        model=model,
-        messages=messages + [{
-            "role": "user",
-            "content": (
-                "The tool-use limit has been reached. Use the event data and tool results "
-                "already collected. Do not call tools. Write the complete weekly briefing now."
-            ),
-        }],
-        max_tokens=4096,
-    )
+    try:
+        final_response = client.chat.completions.create(
+            model=model,
+            messages=messages + [{
+                "role": "user",
+                "content": (
+                    "The tool-use limit has been reached. Use the event data and tool results "
+                    "already collected. Do not call tools. Write the complete weekly briefing now."
+                ),
+            }],
+            max_tokens=request_max_tokens,
+        )
+    except Exception as error:
+        if "rate_limit_exceeded" in str(error) or "429" in str(error):
+            log.warning("Groq rate limit reached during final request; using fallback")
+            return _build_fallback_briefing(events)
+        raise
     final_text = final_response.choices[0].message.content
     if not final_text:
         raise RuntimeError("Groq returned an empty final briefing")
@@ -288,4 +301,36 @@ def _format_events_for_prompt(events: list[dict]) -> str:
             line += f" | With: {e['attendees']}"
         lines.append(line)
 
+    return "\n".join(lines)
+
+
+def _build_fallback_briefing(events: list[dict]) -> str:
+    """Create a useful briefing when the LLM is temporarily unavailable."""
+    lines = [
+        "MISSION STATUS",
+        f"- {len(events)} events are scheduled in the next week.",
+        "",
+        "UPCOMING INTEL",
+    ]
+    for event in events:
+        start = event.get("start_time", "")
+        if hasattr(start, "strftime"):
+            if start.tzinfo is None:
+                start = start.replace(tzinfo=ZoneInfo(settings.calendar_timezone))
+            else:
+                start = start.astimezone(ZoneInfo(settings.calendar_timezone))
+            start = start.strftime("%a, %b %-d at %-I:%M %p %Z")
+        details = f"- {start}: {event['title']}"
+        if event.get("location"):
+            details += f" | {event['location']}"
+        lines.append(details)
+
+    lines.extend([
+        "",
+        "LOGISTICS",
+        "- Review event locations and prepare bags, documents, and travel time before each appointment.",
+        "",
+        "PREP LIST",
+        "- Confirm the week’s calendar and handle any overlapping or time-sensitive events in advance.",
+    ])
     return "\n".join(lines)
