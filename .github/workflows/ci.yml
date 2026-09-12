@@ -36,6 +36,8 @@ jobs:
       HOME_LOCATION: ${{ secrets.HOME_LOCATION }}
       WORK_LOCATION: ${{ secrets.WORK_LOCATION }}
       SCHOOL_LOCATION: ${{ secrets.SCHOOL_LOCATION }}
+      GOLF_LOCATION: ${{ secrets.GOLF_LOCATION }}
+      DAYCARE_LOCATION: ${{ secrets.DAYCARE_LOCATION }}
       BRIEFING_DAYS_AHEAD: ${{ secrets.BRIEFING_DAYS_AHEAD || 7 }}
       AGENT_TONE: ${{ secrets.AGENT_TONE }}
       DAILY_ROUTINE: ${{ secrets.DAILY_ROUTINE }}
@@ -83,6 +85,8 @@ jobs:
       HOME_LOCATION: ${{ secrets.HOME_LOCATION }}
       WORK_LOCATION: ${{ secrets.WORK_LOCATION }}
       SCHOOL_LOCATION: ${{ secrets.SCHOOL_LOCATION }}
+      GOLF_LOCATION: ${{ secrets.GOLF_LOCATION }}
+      DAYCARE_LOCATION: ${{ secrets.DAYCARE_LOCATION }}
       BRIEFING_DAYS_AHEAD: ${{ secrets.BRIEFING_DAYS_AHEAD || 7 }}
       AGENT_TONE: ${{ secrets.AGENT_TONE }}
       DAILY_ROUTINE: ${{ secrets.DAILY_ROUTINE }}

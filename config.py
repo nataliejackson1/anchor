@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     home_location: str = ""
     work_location: str = ""
     school_location: str = ""
+    golf_location: str = ""
+    daycare_location: str = ""
     briefing_days_ahead: int = 7
 
     agent_tone: str = "warm and practical"

@@ -13,7 +13,7 @@ Flow:
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from groq import Groq
 from storage.duckdb_sync import query_events
@@ -23,6 +23,20 @@ from config import settings
 log = logging.getLogger(__name__)
 client = Groq(api_key=settings.groq_api_key)
 model = settings.groq_model
+
+
+def _chat_completion(messages: list[dict], *, tools: list[dict] | None = None, max_tokens: int = 1800):
+    """Call Groq with parameters compatible with reasoning and non-reasoning models."""
+    kwargs = {
+        "model": model,
+        "messages": messages,
+        "max_completion_tokens": max_tokens,
+    }
+    if tools is not None:
+        kwargs["tools"] = tools
+    if model.startswith("openai/"):
+        kwargs["reasoning_effort"] = "low"
+    return client.chat.completions.create(**kwargs)
 
 # ── Tool definitions (what Groq sees) ───────────────────────────────────────
 
@@ -232,12 +246,7 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
         log.info(f"Agent iteration {iteration}")
 
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                tools=TOOLS,
-                max_tokens=request_max_tokens,
-            )
+            response = _chat_completion(messages, tools=TOOLS, max_tokens=request_max_tokens)
         except Exception as error:
             error_text = str(error)
             if "rate_limit_exceeded" in error_text or "429" in error_text:
@@ -249,17 +258,13 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
             log.warning(
                 "Groq could not parse a tool call; requesting the briefing without more tools"
             )
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages + [{
+            response = _chat_completion(messages + [{
                     "role": "user",
                     "content": (
                         "Use the event data and tool results already collected. "
                         "Do not call more tools. Write the complete weekly briefing now."
                     ),
-                }],
-                max_tokens=request_max_tokens,
-            )
+                }], max_tokens=request_max_tokens)
 
         message = response.choices[0].message
 
@@ -291,17 +296,13 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
 
     log.warning("Agent hit max iterations; requesting a final briefing without tools")
     try:
-        final_response = client.chat.completions.create(
-            model=model,
-            messages=messages + [{
+        final_response = _chat_completion(messages + [{
                 "role": "user",
                 "content": (
                     "The tool-use limit has been reached. Use the event data and tool results "
                     "already collected. Do not call tools. Write the complete weekly briefing now."
                 ),
-            }],
-            max_tokens=request_max_tokens,
-        )
+            }], max_tokens=request_max_tokens)
     except Exception as error:
         if "rate_limit_exceeded" in str(error) or "429" in str(error):
             log.warning("Groq rate limit reached during final request; using fallback")
@@ -342,7 +343,7 @@ def _format_events_for_prompt(events: list[dict]) -> str:
 
 
 def _build_fallback_briefing(events: list[dict]) -> str:
-    """Create a useful briefing when the LLM is temporarily unavailable."""
+    """Create a useful briefing with direct tool enrichment when Groq is unavailable."""
     tone = settings.agent_tone.lower()
     is_command_tone = any(
         keyword in tone for keyword in ("sergeant", "hard core", "hardcore", "command", "ops")
@@ -352,6 +353,7 @@ def _build_fallback_briefing(events: list[dict]) -> str:
         if is_command_tone
         else f"- {len(events)} events are scheduled in the next week."
     )
+    enriched_events = _enrich_events_for_fallback(events)
     lines = [
         "MISSION STATUS",
         mission_line,
@@ -363,7 +365,7 @@ def _build_fallback_briefing(events: list[dict]) -> str:
             "",
         ])
     lines.append("WEEK AT A GLANCE")
-    for event in events:
+    for event in enriched_events:
         start = event.get("start_time", "")
         formatted_start = str(start)
         if hasattr(start, "strftime"):
@@ -378,5 +380,76 @@ def _build_fallback_briefing(events: list[dict]) -> str:
             lines.append(f"  Where: {event['location']}")
         else:
             lines.append("  Where: Home / no location listed")
+        if event.get("drive_summary"):
+            lines.append(f"  Transit: {event['drive_summary']}")
+        if event.get("weather_summary"):
+            lines.append(f"  Weather: {event['weather_summary']}")
+
+    golf_windows = _golf_weather_windows()
+    if golf_windows:
+        lines.extend(["", "WEATHER WINDOWS", "- ⛳ GOLF WINDOW: " + "; ".join(golf_windows)])
 
     return "\n".join(lines)
+
+
+def _enrich_events_for_fallback(events: list[dict]) -> list[dict]:
+    """Add drive and relevant weather details without requiring an LLM tool loop."""
+    enriched = []
+    home = settings.home_location
+    home_key = home.lower().replace(" ", "")
+    for event in events:
+        copy = dict(event)
+        location = str(event.get("location") or "").strip()
+        title = str(event.get("title") or "").lower()
+        if location and location.lower().replace(" ", "") != home_key and location.lower() != "nan":
+            drive = get_drive_time(home, location, _event_iso(event.get("start_time")))
+            if not drive.get("error"):
+                copy["drive_summary"] = drive["summary"]
+
+        if any(keyword in title for keyword in ("golf", "school", "pickup", "outdoor", "soccer")):
+            weather = get_weather(
+                _event_date(event.get("start_time")),
+                _weather_area(location or home),
+            )
+            if not weather.get("error"):
+                copy["weather_summary"] = weather["summary"]
+        enriched.append(copy)
+    return enriched
+
+
+def _golf_weather_windows() -> list[str]:
+    """Find promising golf days in the available forecast window."""
+    if not settings.golf_location:
+        return []
+    today = datetime.now(ZoneInfo(settings.calendar_timezone)).date()
+    windows = []
+    for offset in range(5):
+        date = today + timedelta(days=offset)
+        weather = get_weather(date.isoformat(), _weather_area(settings.golf_location))
+        if not weather.get("error") and weather.get("precipitation_chance", 100) < 35:
+            windows.append(f"{date.strftime('%a %b %-d')} ({weather['summary']})")
+    return windows[:3]
+
+
+def _event_iso(value) -> str | None:
+    if not hasattr(value, "isoformat"):
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=ZoneInfo(settings.calendar_timezone))
+    return value.isoformat()
+
+
+def _event_date(value) -> str:
+    if hasattr(value, "date"):
+        return value.date().isoformat()
+    return datetime.now(ZoneInfo(settings.calendar_timezone)).date().isoformat()
+
+
+def _weather_area(location: str) -> str:
+    """Prefer a geocodable city/state area over a full street address."""
+    parts = [part.strip() for part in location.split(",")]
+    if len(parts) >= 3:
+        return ", ".join(parts[-3:-1])
+    if len(parts) == 2:
+        return location
+    return "Riverview, FL"
