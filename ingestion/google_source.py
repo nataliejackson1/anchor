@@ -1,7 +1,9 @@
+import json
 import os
 import logging
 from datetime import datetime, timedelta, timezone
 from google.auth.transport.requests import Request 
+from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials 
 from google_auth_oauthlib.flow import InstalledAppFlow 
 from googleapiclient.discovery import build
@@ -14,12 +16,35 @@ CREDENTIALS_FILE = "credentials.json"
 TOKEN_FILE = "token.json"         
 
 
+def _load_service_account_credentials() -> Credentials | None:
+    """Support headless GitHub Actions by accepting a Google service account JSON."""
+    raw = os.getenv("GOOGLE_CREDENTIALS_JSON") or os.getenv("GOOGLE_CREDENTIALS")
+    if not raw:
+        return None
+
+    try:
+        info = json.loads(raw)
+    except json.JSONDecodeError:
+        log.warning("GOOGLE_CREDENTIALS_JSON is not valid JSON; falling back to file-based auth.")
+        return None
+
+    if info.get("type") != "service_account":
+        log.warning("GOOGLE_CREDENTIALS_JSON was provided but is not a service account JSON; falling back to file-based auth.")
+        return None
+
+    return service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+
+
 def _get_credentials() -> Credentials:
     """
     Load stored credentials or run the OAuth flow to get new ones.
     On first run: opens a browser window for you to approve access.
     On subsequent runs: silently loads token.json (no browser needed).
     """
+    service_account_creds = _load_service_account_credentials()
+    if service_account_creds:
+        return service_account_creds
+
     creds = None
 
     # Load existing token if it exists
@@ -38,7 +63,8 @@ def _get_credentials() -> Credentials:
             if not os.path.exists(CREDENTIALS_FILE):
                 raise FileNotFoundError(
                     f"Missing {CREDENTIALS_FILE}. "
-                    "Download it from Google Cloud Console → APIs & Services → Credentials."
+                    "Download it from Google Cloud Console → APIs & Services → Credentials. "
+                    "For GitHub Actions, set GOOGLE_CREDENTIALS_JSON to a service account JSON string."
                 )
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
             creds = flow.run_local_server(port=0, prompt="consent")

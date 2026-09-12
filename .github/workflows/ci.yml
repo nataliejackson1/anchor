@@ -102,6 +102,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Write Google credentials
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        run: |
+          if [ -n "$GOOGLE_CREDENTIALS_JSON" ]; then
+            printf '%s' "$GOOGLE_CREDENTIALS_JSON" > credentials.json
+          fi
+
       - name: Send weekly briefing
         run: |
           mkdir -p logs
