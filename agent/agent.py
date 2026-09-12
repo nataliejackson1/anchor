@@ -181,7 +181,7 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
     # Groq will call tools, we execute them, feed results back, repeat
     # until Groq stops calling tools and gives us a final text response.
 
-    max_iterations = 10  # safety cap to prevent infinite loops
+    max_iterations = 15  # safety cap to prevent infinite loops
     iteration = 0
 
     while iteration < max_iterations:
@@ -239,8 +239,23 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
                 "content": result,
             })
 
-    log.warning("Agent hit max iterations without completing")
-    return "Agent did not complete within the allowed iterations."
+    log.warning("Agent hit max iterations; requesting a final briefing without tools")
+    final_response = client.chat.completions.create(
+        model=model,
+        messages=messages + [{
+            "role": "user",
+            "content": (
+                "The tool-use limit has been reached. Use the event data and tool results "
+                "already collected. Do not call tools. Write the complete weekly briefing now."
+            ),
+        }],
+        max_tokens=4096,
+    )
+    final_text = final_response.choices[0].message.content
+    if not final_text:
+        raise RuntimeError("Groq returned an empty final briefing")
+    log.info("Agent complete after max-iteration fallback")
+    return final_text
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
