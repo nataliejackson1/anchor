@@ -154,7 +154,7 @@ ACTION ITEMS
 Only decisions, childcare conflicts, schedule changes, or appointments requiring attention. Omit this section when empty.
 
 WEEK AT A GLANCE
-One short bullet per important event. Include local date, time, person, location, and drive time only when relevant. Do not repeat events unnecessarily.
+Group appointments by weekday. Use a clear weekday and date heading, followed by short bullets for that day's events. Include local time, person, location, and drive time only when relevant. Do not repeat events unnecessarily.
 
 WEATHER WINDOWS
 Only Grant's best golf opportunities, school-pickup weather warnings, or weather-sensitive outdoor events. Omit this section when empty.
@@ -365,15 +365,21 @@ def _build_fallback_briefing(events: list[dict]) -> str:
             "",
         ])
     lines.append("WEEK AT A GLANCE")
+    current_day = None
     for event in enriched_events:
         start = event.get("start_time", "")
         formatted_start = str(start)
+        day_heading = ""
         if hasattr(start, "strftime"):
             if start.tzinfo is None:
                 start = start.replace(tzinfo=ZoneInfo(settings.calendar_timezone))
             else:
                 start = start.astimezone(ZoneInfo(settings.calendar_timezone))
+            day_heading = start.strftime("%A, %B %-d")
             formatted_start = start.strftime("%a, %b %-d, %-I:%M %p %Z")
+        if day_heading != current_day:
+            lines.append(day_heading.upper())
+            current_day = day_heading
         lines.append(f"- 📅 **{event['title']}**")
         lines.append(f"  When: {formatted_start}")
         if event.get("location"):

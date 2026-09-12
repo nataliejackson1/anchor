@@ -111,6 +111,28 @@ def test_render_html_removes_duplicate_headers_and_markdown_leaks():
     assert "Natalie**" not in html
 
 
+def test_render_html_normalizes_markdown_emoji_images():
+    """Emoji image Markdown becomes a normal inline emoji in the email."""
+    html = _render_html(
+        "MISSION STATUS\n- ![🎯](https://fonts.gstatic.com/example.png) Ready for launch.\n",
+        "September 12, 2026",
+    )
+
+    assert "🎯 Ready for launch." in html
+    assert "fonts.gstatic.com" not in html
+
+
+def test_render_html_styles_day_headings():
+    """Grouped weekday headings are rendered as visible subheadings."""
+    html = _render_html(
+        "WEEK AT A GLANCE\nSATURDAY, SEPTEMBER 12\n- Swim lesson\n",
+        "September 12, 2026",
+    )
+
+    assert "SATURDAY, SEPTEMBER 12" in html
+    assert "color:#d97706" in html
+
+
 @patch("delivery.email_sender.smtplib.SMTP_SSL")
 def test_send_briefing_email_success(mock_smtp):
     """Email sends successfully with valid credentials."""

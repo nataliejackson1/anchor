@@ -91,6 +91,9 @@ def _render_html(briefing_text: str, week_of: str) -> str:
     if items:
       content += '<ul style="margin:0; padding:0; list-style:none;">'
       for item in items:
+        if item.startswith("__DAY__"):
+          content += f'<li style="list-style:none; margin:18px 0 8px 0; padding:0; color:#d97706; font-size:14px; letter-spacing:.5px; font-weight:bold;">{_format_inline(item[7:])}</li>'
+          continue
         content += (
           '<li style="margin:0 0 12px 0; padding:0 0 12px 0; '
           'border-bottom:1px solid #e8edf2; line-height:1.55;">'
@@ -99,7 +102,10 @@ def _render_html(briefing_text: str, week_of: str) -> str:
         )
       content += '</ul>'
     for paragraph in paragraphs:
-      content += f'<p style="margin:0 0 12px 0; line-height:1.6;">{_format_inline(paragraph)}</p>'
+      if re.fullmatch(r"(?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY), .+", paragraph.upper()):
+        content += f'<h3 style="margin:18px 0 8px 0; color:#d97706; font-size:14px; letter-spacing:.5px;">{_format_inline(paragraph)}</h3>'
+      else:
+        content += f'<p style="margin:0 0 12px 0; line-height:1.6;">{_format_inline(paragraph)}</p>'
     html_sections += f'''
       <tr>
       <td style="padding:0 0 20px 0;">
@@ -198,6 +204,9 @@ def _briefing_sections(briefing_text: str) -> list[tuple[str, list[str], list[st
       if items or paragraphs:
         sections.append((title, items, paragraphs))
       title, items, paragraphs = normalized, [], []
+    elif found_heading and _is_day_heading(line):
+      items.append(f"__DAY__{line.strip('*_# ')}")
+      current_item = None
     elif line.startswith(("- ", "– ", "* ")):
       item = re.sub(r"^(?:[-–*•]\s*)+", "", line).strip()
       if found_heading:
@@ -235,8 +244,19 @@ def _only_empty_marker(section: tuple[str, list[str], list[str]]) -> bool:
   return all(item.strip().lower().rstrip(".") in {"none", "none identified", "none identified."} for item in items)
 
 
+def _is_day_heading(value: str) -> bool:
+  """Recognize weekday/date labels used to group the weekly agenda."""
+  return bool(re.fullmatch(
+    r"(?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY), .+",
+    value.strip("*_# ").upper(),
+  ))
+
+
 def _format_inline(value: str) -> str:
   """Escape text, then render the small Markdown subset used by the agent."""
+  value = re.sub(r"!\[([^\]]+)\]\([^)]*\)", r"\1", value)
+  value = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", value)
+  value = re.sub(r"^(?:[-–*•]\s*)+", "", value.strip())
   escaped = html.escape(value)
   escaped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
   escaped = re.sub(r"\*(.+?)\*", r"<em>\1</em>", escaped)
