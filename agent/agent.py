@@ -188,12 +188,31 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
         iteration += 1
         log.info(f"Agent iteration {iteration}")
 
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            tools=TOOLS,
-            max_tokens=4096,
-        )
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                tools=TOOLS,
+                max_tokens=4096,
+            )
+        except Exception as error:
+            if "output_parse_failed" not in str(error):
+                raise
+
+            log.warning(
+                "Groq could not parse a tool call; requesting the briefing without more tools"
+            )
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages + [{
+                    "role": "user",
+                    "content": (
+                        "Use the event data and tool results already collected. "
+                        "Do not call more tools. Write the complete weekly briefing now."
+                    ),
+                }],
+                max_tokens=4096,
+            )
 
         message = response.choices[0].message
 
@@ -208,8 +227,12 @@ def run_agent(home_location: str = "Riverview, FL", days_ahead: int = 7) -> str:
 
         # Execute each tool Groq requested and add results
         for tool_call in message.tool_calls:
-            tool_input = json.loads(tool_call.function.arguments)
-            result = _execute_tool(tool_call.function.name, tool_input)
+            try:
+                tool_input = json.loads(tool_call.function.arguments)
+                result = _execute_tool(tool_call.function.name, tool_input)
+            except (json.JSONDecodeError, KeyError, TypeError) as error:
+                log.warning("Invalid tool arguments for %s: %s", tool_call.function.name, error)
+                result = json.dumps({"error": f"Invalid tool arguments: {error}"})
             messages.append({
                 "role": "tool",
                 "tool_call_id": tool_call.id,
