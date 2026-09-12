@@ -172,11 +172,12 @@ def _briefing_sections(briefing_text: str) -> list[tuple[str, list[str], list[st
   paragraphs = []
   before_headings = []
   found_heading = False
+  current_item = None
   for raw_line in briefing_text.strip().splitlines():
     line = raw_line.strip()
     if not line:
       continue
-    normalized = line.rstrip(":").upper()
+    normalized = line.strip("*_# ").rstrip(":").upper()
     if normalized in {
       "MISSION STATUS",
       "ACTION ITEMS",
@@ -192,11 +193,15 @@ def _briefing_sections(briefing_text: str) -> list[tuple[str, list[str], list[st
         sections.append((title, items, paragraphs))
       title, items, paragraphs = normalized, [], []
     elif line.startswith(("- ", "– ", "* ")):
-      item = re.sub(r"^(?:[-–*]\s*)+", "", line).strip()
+      item = re.sub(r"^(?:[-–*•]\s*)+", "", line).strip()
       if found_heading:
         items.append(item)
+        current_item = len(items) - 1
       else:
         before_headings.append(item)
+        current_item = None
+    elif raw_line[:1].isspace() and current_item is not None:
+      items[current_item] += f"\n{line}"
     else:
       if found_heading:
         paragraphs.append(line)
@@ -216,7 +221,8 @@ def _briefing_sections(briefing_text: str) -> list[tuple[str, list[str], list[st
 def _format_inline(value: str) -> str:
   """Escape text, then render the small Markdown subset used by the agent."""
   escaped = html.escape(value)
-  return re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
+  escaped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
+  return escaped.replace("\n", "<br>")
 
 
 def _render_plain(briefing_text: str, week_of: str) -> str:

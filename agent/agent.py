@@ -119,9 +119,13 @@ Rules:
 - Use Eastern Time.
 
 Style requirements:
+- Tone is a hard requirement, not a suggestion. Every section must sound like a firm military-style family operations brief.
 - Use a firm, direct operations-command tone consistent with the configured tone: {agent_tone}.
 - Address Natalie or Grant directly when an action is assigned.
-- Use occasional phrases such as "mission status", "priority", "logistics", and "action required" when they fit naturally.
+- Use phrases such as "MISSION STATUS", "PRIORITY", "ACTION REQUIRED", and "LOGISTICS" when they fit naturally.
+- State exactly what needs to happen, who owns it, and when.
+- Prefer: "ACTION REQUIRED: Grant, confirm the school pickup plan by Tuesday at 1:00 PM."
+- Avoid: "Please remember to make sure everyone is prepared."
 - Be decisive and practical, never theatrical, insulting, or alarmist.
 - Keep the tone consistent across every section without explaining the style instructions.
 
@@ -342,7 +346,7 @@ def _build_fallback_briefing(events: list[dict]) -> str:
         keyword in tone for keyword in ("sergeant", "hard core", "hardcore", "command", "ops")
     )
     mission_line = (
-        f"- Mission status: {len(events)} events are scheduled in the next week."
+        f"- 🎯 Mission status: {len(events)} events are scheduled in the next week."
         if is_command_tone
         else f"- {len(events)} events are scheduled in the next week."
     )
@@ -351,7 +355,7 @@ def _build_fallback_briefing(events: list[dict]) -> str:
         mission_line,
         "",
         "ACTION ITEMS",
-        "- Action required: review any time-sensitive appointments before the week begins."
+        "- ⚠️ Action required: review any time-sensitive appointments before the week begins."
         if is_command_tone
         else "- None identified without the briefing service.",
         "",
@@ -359,21 +363,24 @@ def _build_fallback_briefing(events: list[dict]) -> str:
     ]
     for event in events:
         start = event.get("start_time", "")
+        formatted_start = str(start)
         if hasattr(start, "strftime"):
             if start.tzinfo is None:
                 start = start.replace(tzinfo=ZoneInfo(settings.calendar_timezone))
             else:
                 start = start.astimezone(ZoneInfo(settings.calendar_timezone))
-            start = start.strftime("%a, %b %-d at %-I:%M %p %Z")
-        details = f"- {start}: {event['title']}"
+            formatted_start = start.strftime("%a, %b %-d, %-I:%M %p %Z")
+        lines.append(f"- 📅 **{event['title']}**")
+        lines.append(f"  When: {formatted_start}")
         if event.get("location"):
-            details += f" | {event['location']}"
-        lines.append(details)
+            lines.append(f"  Where: {event['location']}")
+        else:
+            lines.append("  Where: Home / no location listed")
 
     lines.extend([
         "",
         "WEATHER WINDOWS",
-        "- None available while the briefing service is unavailable.",
+        "- None identified.",
         "",
         "PREP LIST",
         "- None.",
