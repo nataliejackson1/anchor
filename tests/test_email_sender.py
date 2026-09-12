@@ -98,6 +98,19 @@ def test_render_html_omits_empty_sections():
     assert "WEATHER WINDOWS" not in html
 
 
+def test_render_html_removes_duplicate_headers_and_markdown_leaks():
+    """The email template owns the header and renders malformed emphasis safely."""
+    html = _render_html(
+        "# Weekly Family Briefing\nWeek of September 12, 2026\n\n"
+        "MISSION STATUS\n- **ACTION REQUIRED**: Natalie** confirm the plan.\n",
+        "September 12, 2026",
+    )
+
+    assert html.count("Weekly Family Briefing") == 1
+    assert "Natalie" in html
+    assert "Natalie**" not in html
+
+
 @patch("delivery.email_sender.smtplib.SMTP_SSL")
 def test_send_briefing_email_success(mock_smtp):
     """Email sends successfully with valid credentials."""

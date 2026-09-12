@@ -122,11 +122,13 @@ Style requirements:
 - Tone is a hard requirement, not a suggestion. Every section must sound like a firm military-style family operations brief.
 - Use a firm, direct operations-command tone consistent with the configured tone: {agent_tone}.
 - Address Natalie or Grant directly when an action is assigned.
-- Use phrases such as "MISSION STATUS", "PRIORITY", "ACTION REQUIRED", and "LOGISTICS" when they fit naturally.
+- Use phrases such as "MISSION STATUS", "PRIORITY", "ACTION REQUIRED", "UPCOMING INTEL", and "LOGISTICS" throughout the briefing.
 - State exactly what needs to happen, who owns it, and when.
 - Prefer: "ACTION REQUIRED: Grant, confirm the school pickup plan by Tuesday at 1:00 PM."
-- Avoid: "Please remember to make sure everyone is prepared."
-- Be decisive and practical, never theatrical, insulting, or alarmist.
+- Avoid: "Please remember to make sure everyone is prepared." Use: "GRANT: Confirm the pickup plan by Tuesday at 1:00 PM."
+- You have creative leeway to invent original, dry, harmless operations jargon and occasional jokes for personality. Use one or two when they improve the briefing, such as "the calendar has entered the theater of operations," "family logistics are at DEFCON manageable," or "no family logistics casualties expected."
+- Humor must be brief, must not change event facts, and must never replace a clear owner, time, or required action.
+- Be decisive, practical, and lightly humorous. Never sound apologetic, generic, insulting, or alarmist.
 - Keep the tone consistent across every section without explaining the style instructions.
 
 Write a concise briefing under 500 words with exactly these sections:
@@ -146,7 +148,7 @@ Only Grant's best golf opportunities, school-pickup weather warnings, or weather
 PREP LIST
 Only concrete calendar-related actions. Omit this section when empty.
 
-Use plain-text headings and short bullets. Leave a blank line between sections. Do not use tables, JSON, long narrative paragraphs, or commentary about tools.
+Use plain-text headings and short bullets. Do not use Markdown bold, italics, heading markers, or nested bullets. Leave a blank line between sections. Do not use tables, JSON, long narrative paragraphs, or commentary about tools.
 """
 
 
@@ -346,7 +348,7 @@ def _build_fallback_briefing(events: list[dict]) -> str:
         keyword in tone for keyword in ("sergeant", "hard core", "hardcore", "command", "ops")
     )
     mission_line = (
-        f"- 🎯 MISSION STATUS: {len(events)} events on deck. Calendar loaded; execute cleanly."
+        f"- 🎯 MISSION STATUS: {len(events)} events on deck. Calendar loaded; execute cleanly. The logistics department remains operational."
         if is_command_tone
         else f"- {len(events)} events are scheduled in the next week."
     )

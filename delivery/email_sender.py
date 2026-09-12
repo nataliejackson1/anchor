@@ -92,9 +92,9 @@ def _render_html(briefing_text: str, week_of: str) -> str:
       content += '<ul style="margin:0; padding:0; list-style:none;">'
       for item in items:
         content += (
-          '<li style="margin:0 0 12px 0; padding:0 0 12px 16px; '
+          '<li style="margin:0 0 12px 0; padding:0 0 12px 0; '
           'border-bottom:1px solid #e8edf2; line-height:1.55;">'
-          f'<span style="color:#d97706; font-size:16px;">•</span>&nbsp;{_format_inline(item)}'
+          f'{_format_inline(item)}'
           '</li>'
         )
       content += '</ul>'
@@ -178,6 +178,12 @@ def _briefing_sections(briefing_text: str) -> list[tuple[str, list[str], list[st
     if not line:
       continue
     normalized = line.strip("*_# ").rstrip(":").upper()
+    if (
+      normalized.startswith("WEEKLY FAMILY BRIEFING")
+      or normalized.startswith("WEEK OF ")
+      or normalized.startswith("ANCHOR / WEEKLY OPERATIONS")
+    ):
+      continue
     if normalized in {
       "MISSION STATUS",
       "ACTION ITEMS",
@@ -233,6 +239,8 @@ def _format_inline(value: str) -> str:
   """Escape text, then render the small Markdown subset used by the agent."""
   escaped = html.escape(value)
   escaped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
+  escaped = re.sub(r"\*(.+?)\*", r"<em>\1</em>", escaped)
+  escaped = escaped.replace("*", "")
   return escaped.replace("\n", "<br>")
 
 
